@@ -42,7 +42,9 @@ public class UsuarioService {
         usuario.setNome(nome);
         usuario.setEmail(email);
 
-        return repository.atualizar(usuario);
+        repository.atualizar(usuario);
+
+        return true;
     }
 
     public boolean deletar(Long id) {

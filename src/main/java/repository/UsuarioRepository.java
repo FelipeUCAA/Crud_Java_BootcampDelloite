@@ -1,150 +1,80 @@
 package repository;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
 import model.UsuarioModel;
 
-import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
 
 public class UsuarioRepository {
 
-    private static final String URL = "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1";
-    private static final String USER = "sa";
-    private static final String PASSWORD = "";
-
-    public UsuarioRepository() {
-        criarTabela();
-    }
-
-    private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(URL, USER, PASSWORD);
-    }
-
-    private void criarTabela() {
-        String sql = """
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id IDENTITY PRIMARY KEY,
-                nome VARCHAR(100),
-                email VARCHAR(100)
-            )
-        """;
-
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement()) {
-
-            stmt.execute(sql);
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao criar tabela", e);
-        }
-    }
-    //map
-    private UsuarioModel map(ResultSet rs) throws SQLException {
-        return new UsuarioModel(
-                rs.getLong("id"),
-                rs.getString("nome"),
-                rs.getString("email")
-        );
-    }
+    private static final EntityManagerFactory emf =
+            Persistence.createEntityManagerFactory("h2PU");
 
     // CREATE
     public void salvar(UsuarioModel usuario) {
-        String sql = "INSERT INTO usuarios (nome, email) VALUES (?, ?)";
+        EntityManager em = emf.createEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        em.persist(usuario);
 
-            ps.setString(1, usuario.getNome());
-            ps.setString(2, usuario.getEmail());
-            ps.executeUpdate();
-            //pega id gerado automatico
-            try (ResultSet rs = ps.getGeneratedKeys()) {
-                if (rs.next()) {
-                    usuario.setId(rs.getLong(1));
-                }
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao salvar usuário", e);
-        }
+        em.getTransaction().commit();
+        em.close();
     }
 
-    // READ - todos
+    // READ
     public List<UsuarioModel> listar() {
-        List<UsuarioModel> usuarios = new ArrayList<>();
-        String sql = "SELECT id, nome, email FROM usuarios";
+        EntityManager em = emf.createEntityManager();
 
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        List<UsuarioModel> lista =
+                em.createQuery("FROM UsuarioModel", UsuarioModel.class)
+                        .getResultList();
 
-            while (rs.next()) {
-                usuarios.add(map(rs));
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao listar usuários", e);
-        }
-
-        return usuarios;
+        em.close();
+        return lista;
     }
 
     // READ - por ID
     public UsuarioModel buscarPorId(Long id) {
-        String sql = "SELECT id, nome, email FROM usuarios WHERE id = ?";
-
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setLong(1, id);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return map(rs);
-                }
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao buscar usuário", e);
-        }
-
-        return null;
+        EntityManager em = emf.createEntityManager();
+        UsuarioModel usuario = em.find(UsuarioModel.class, id);
+        em.close();
+        return usuario;
     }
 
     // UPDATE
-    public boolean atualizar(UsuarioModel usuario) {
-        String sql = """
-            UPDATE usuarios
-            SET nome = ?, email = ?
-            WHERE id = ?
-        """;
+    public void atualizar(UsuarioModel usuario) {
 
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        EntityManager em = emf.createEntityManager();
+        em.getTransaction().begin();
 
-            ps.setString(1, usuario.getNome());
-            ps.setString(2, usuario.getEmail());
-            ps.setLong(3, usuario.getId());
+        UsuarioModel managed = em.find(UsuarioModel.class, usuario.getId());
 
-            return ps.executeUpdate() > 0;
+        managed.setNome(usuario.getNome());
+        managed.setEmail(usuario.getEmail());
 
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao atualizar usuário", e);
-        }
+        em.getTransaction().commit();
+        em.close();
     }
+
 
     // DELETE
     public boolean remover(Long id) {
-        String sql = "DELETE FROM usuarios WHERE id = ?";
+        EntityManager em = emf.createEntityManager();
+        em.getTransaction().begin();
 
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        UsuarioModel usuario = em.find(UsuarioModel.class, id);
+        boolean removed = false;
 
-            ps.setLong(1, id);
-            return ps.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao remover usuário", e);
+        if (usuario != null) {
+            em.remove(usuario);
+            removed = true;
         }
+
+        em.getTransaction().commit();
+        em.close();
+        return removed;
     }
+
 }

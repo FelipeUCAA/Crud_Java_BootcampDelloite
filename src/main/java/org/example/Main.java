@@ -4,13 +4,18 @@ import model.UsuarioModel;
 import repository.UsuarioRepository;
 import service.UsuarioService;
 
+import jakarta.persistence.Persistence;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import java.util.List;
 import java.util.Scanner;
-import java.util.regex.Pattern;
+
 
 public class Main {
     private static final UsuarioService service = new UsuarioService(new UsuarioRepository());
     private static final Scanner scanner = new Scanner(System.in);
+    EntityManagerFactory emf = Persistence.createEntityManagerFactory("h2PU");
+    EntityManager em = emf.createEntityManager();
 
     public static void main(String[] args) {
         boolean running = true;
@@ -126,4 +131,5 @@ public class Main {
         boolean ok = service.deletar(id);
         System.out.println(ok ? "Usuário removido!" : "Usuário não encontrado.");
     }
+
 }

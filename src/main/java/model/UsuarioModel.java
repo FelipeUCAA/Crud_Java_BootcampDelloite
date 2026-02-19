@@ -1,10 +1,18 @@
 package model;
 
-public class UsuarioModel {
+import jakarta.persistence.*;
 
+@Entity
+@Table(name= "usuarios")
+public class UsuarioModel {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String nome;
     private String email;
+
+    public UsuarioModel() {
+    }
 
     public UsuarioModel(String nome, String email) {
         this(null, nome, email);
